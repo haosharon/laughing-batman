@@ -3,14 +3,19 @@ import sys
 
 def print_message(message):
     border = '********************************'
-    print border
+    print
     print border
     print message
     print border
-    print border
+    print
+
+def execute_command(cmd):
+    print '$ ' + cmd
+    sub = subprocess.Popen(cmd, shell=True)
+    sub.communicate()
+    return
 
 def get_times(file_name):
-    print_message('getting times')
     f = open(file_name, 'r')
     times = []
     for line in f:
@@ -28,83 +33,89 @@ def get_times(file_name):
         times.append(tup)
     return times
 
+# split video into intermediate files, given a list of time tuples
 def split(input_name, times):
-    index = 0
+    print_message('Splitting video into intermediate files')
     intermediate_names = []
+    index = 0
     for time in times:
-        intermediate_name = "__intermediate_%(index)s__" % \
+        intermediate_name = "intermediate_%(index)s" % \
         {'index': index}
-        start = time[0]
-        duration = time[1]
         intermediate_names.append(intermediate_name)
+
         intermediate_file = intermediate_name + '.mp4'
 
+        start = time[0]
+        duration = time[1]
 
-        cmd = "ffmpeg -ss %(start)s -i %(input_name)s -ss %(start)s -t %(duration)s %(output)s" % \
+        cmd = "ffmpeg -ss %(start)s -i %(input_name)s -t %(duration)s %(output)s" % \
         {'input_name': input_name, 'start': start, 'duration': duration, 'output': intermediate_file}
-        index += 1
+
         print_message('splitting ' + intermediate_name)
-        sub = subprocess.Popen(cmd, shell=True)
-        sub.communicate()
-        print_message('done spltting ' + intermediate_name)
-    print_message('done spltting all')
+        execute_command(cmd)
+
+        index += 1
+
     return intermediate_names
 
-def convert(intermediate_names):
-    print_message('converting')
+# converts mp4 files to mpg
+def mp4_to_mpg(intermediate_names):
+    print_message('Converting intermediate files to mpg')
     for name in intermediate_names:
         cmd = "ffmpeg -i %(intermediate)s -qscale:v 1 %(mpg)s" % \
         {'intermediate': name + '.mp4', 'mpg': name + '.mpg'}
-        sub = subprocess.Popen(cmd, shell=True)
-        print_message('converting ' + name)
-        sub.communicate()
-    print_message('done converting all')
 
+        print_message('converting ' + name)
+        execute_command(cmd)
+
+    print_message('Done converting all')
+
+# joins many mpg files together
 def concat(intermediate_names):
-    print_message('concating')
+    print_message('Joining mpg files together')
+    file_all = 'intermediate_all.mpg'
     cmd = "cat "
     for name in intermediate_names:
         cmd += name + '.mpg '
-    cmd += "> intermediate_all.mpg"
-    sub = subprocess.Popen(cmd, shell=True)
-    sub.communicate()
-    return 'intermediate_all.mpg'
+    cmd += "> " + file_all
 
+    execute_command(cmd)
+    return file_all
+
+# convert final mgp file back to mp4
 def mpg_to_mp4(mpg, output):
+    print_message("Converting mpg file back to mp4")
     cmd = "ffmpeg -i %(name)s -qscale:v 2 %(output)s" % \
     {'name': mpg, 'output': output}
+    execute_command(cmd)
 
-    sub = subprocess.Popen(cmd, shell=True)
-    sub.communicate()
-    print_message('converting')
-
-def clean_up(intermediate_names):
-    print_message('cleaning up')
+# remove all intermediate files created
+def clean_up(intermediate_names, file_all):
+    print_message('Removing intermediate files')
     cmd = ''
     for name in intermediate_names:
         cmd += "rm %(name)s.mp4 %(name)s.mpg;" % \
         {'name': name}
-    sub = subprocess.Popen(cmd, shell=True)
-    sub.communicate()
+    execute_command(cmd)
 
-    cmd = 'rm intermediate_all.mpg'
-    sub = subprocess.Popen(cmd, shell=True)
-    sub.communicate()
+    cmd = 'rm ' + file_all
+    execute_command(cmd)
     return
 
-def create_split(input_name, times_file, output_name):
+# main
+def main(input_name, times_file, output_name):
     times = get_times(times_file)
     intermediate_names = split(input_name, times)
 
-    convert(intermediate_names)
+    mp4_to_mpg(intermediate_names)
 
     file_all = concat(intermediate_names)
 
     mpg_to_mp4(file_all, output_name)
 
-    clean_up(intermediate_names)
+    clean_up(intermediate_names, file_all)
 
-    print_message('done with everything!')
+    print_message('Done.')
 
 if __name__ == '__main__':
     if len(sys.argv) >= 4:
@@ -112,4 +123,4 @@ if __name__ == '__main__':
         times_file = sys.argv[2]
         output_name = sys.argv[3]
 
-        create_split(input_name, times_file, output_name)
+        main(input_name, times_file, output_name)
