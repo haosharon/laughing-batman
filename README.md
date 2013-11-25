@@ -5,7 +5,7 @@ This is a script that splits film using the [`ffmpeg`](http://ffmpeg.org/) libra
 ##Usage
 
 ```
-python main.py INPUT-FILE TIMES OUTPUT-FILE
+python main.py INPUT-FILE TIMES-FILE OUTPUT-FILE
 ```
 
 where `TIMES` is a `csv` file of start times and durations such as
