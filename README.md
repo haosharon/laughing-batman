@@ -8,7 +8,7 @@ This is a script that splits film using the [`ffmpeg`](http://ffmpeg.org/) libra
 python main.py INPUT-FILE TIMES-FILE OUTPUT-FILE
 ```
 
-where `TIMES` is a `csv` file of start times and durations such as
+where `TIMES-FILE` is a `csv` file of start times and durations such as
 ```
 17:35, 8
 21:50, 8
